@@ -127,24 +127,32 @@ namespace SingleResponsibilityPrinciple
         private void StoreTrades(IEnumerable<TradeRecord> trades)
         {
             LogMessage("INFO: Connecting to database");
-            // The first connection string uses |DataDirectory| 
-            //    and assumes the tradedatabase.mdf file is stored in 
-            //    SingleResponsibilityPrinciple\bin\Debug 
-            using (var connection = new System.Data.SqlClient.SqlConnection(@"Data Source=(LocalDB)\MSSQLLocalDB;AttachDbFilename=|DataDirectory|\tradedatabase.mdf;Integrated Security=True;Connect Timeout=30;"))
             // Template for connection string from database connection file
             //    The @ sign allows for back slashes
             //    Watch for double quotes which must be escaped using "" 
             //    Watch for extra spaces after C: and avoid paths with - hyphens -
-            //    using (var connection = new System.Data.SqlClient.SqlConnection(@"  ;"))
-            //using (SqlConnection connection = new System.Data.SqlClient.SqlConnection(@"Data Source=(LocalDB)\MSSQLLocalDB;AttachDbFilename=C:\Users\tgibbons\source\repos\cis-3285-unit-8-f2020-tgibbons-css\Database\tradedatabase.mdf;Integrated Security=True;Connect Timeout=30"))
-            
+            string genericConnectString = @"Data Source=(local);Initial Catalog=TradeDatabase;Integrated Security=True;";
+            // The datadirConnectString connection string uses |DataDirectory| 
+            //    and assumes the tradedatabase.mdf file is stored in 
+            //    SingleResponsibilityPrinciple\bin\Debug 
+            string datadirConnectString = @"Data Source=(LocalDB)\MSSQLLocalDB;AttachDbFilename=|DataDirectory|\tradedatabase.mdf;Integrated Security=True;Connect Timeout=30;";
+            // This users the Azure connection string
+            string azureConnectString = @"Data Source=cis3115-server.database.windows.net;Initial Catalog=CIS3115;User ID=cis3115;Password=Saints4SQL;Connect Timeout=60;Encrypt=True;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False";
+            string tomConnectString = @"Data Source=(LocalDB)\MSSQLLocalDB;AttachDbFilename=C:\Users\tgibbons\source\repos\CIS-3285-Asg8-Start\SingleResponsibilityPrinciple\tradedatabase.mdf;Integrated Security=True;Connect Timeout=30";
+
+
+            // Change the connection string used to match the one you want
+            using (var connection = new System.Data.SqlClient.SqlConnection(azureConnectString))
             {
+                LogMessage("INFO:Going to open database connection");
                 connection.Open();
-                using (SqlTransaction transaction = connection.BeginTransaction())
+                LogMessage("INFO:Database connection OPEN");
+
+                using (var transaction = connection.BeginTransaction())
                 {
-                    foreach (TradeRecord trade in trades)
+                    foreach (var trade in trades)
                     {
-                        SqlCommand command = connection.CreateCommand();
+                        var command = connection.CreateCommand();
                         command.Transaction = transaction;
                         command.CommandType = System.Data.CommandType.StoredProcedure;
                         command.CommandText = "dbo.insert_trade";
@@ -152,6 +160,7 @@ namespace SingleResponsibilityPrinciple
                         command.Parameters.AddWithValue("@destinationCurrency", trade.DestinationCurrency);
                         command.Parameters.AddWithValue("@lots", trade.Lots);
                         command.Parameters.AddWithValue("@price", trade.Price);
+                        LogMessage("INFO: Adding trade to database...");
 
                         command.ExecuteNonQuery();
                     }
